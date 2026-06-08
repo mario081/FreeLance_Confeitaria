@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Pedido {
+  id                 Int      @id @default(autoincrement())
+  nomeCliente        String
+  saborBolo          String
+  dataEntrega        DateTime
+  possuiPersonalizados Boolean @default(false)
+  criadoEm           DateTime @default(now())
+  tarefas            Tarefa[]
+}
+
+model Tarefa {
+  id           Int      @id @default(autoincrement())
+  descricao    String
+  dataProgramada DateTime
+  concluida    Boolean  @default(false)
+  pedido       Pedido   @relation(fields: [pedidoId], references: [id])
+  pedidoId     Int
+}

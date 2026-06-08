@@ -1,0 +1,26 @@
+# Desenvolvimento local — sobe apenas o Postgres.
+# Uso: docker compose up -d
+#
+# Backend e frontend rodam na sua máquina com npm (veja README.md).
+
+volumes:
+  postgres_data_dev:
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_confeitaria_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-confeitaria}
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

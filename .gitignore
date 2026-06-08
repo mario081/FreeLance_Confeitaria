@@ -1,0 +1,25 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+
+# Variáveis de ambiente (nunca commitar)
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Nunca subir o dist compilado (gerado no build do Docker)
+backend/dist/
+frontend/dist/
