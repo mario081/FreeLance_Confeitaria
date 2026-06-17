@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Patch, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { TarefasService } from './tarefas.service';
-import { ApiKeyGuard } from '../auth/api-key.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@UseGuards(ApiKeyGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('tarefas')
 export class TarefasController {
   constructor(private readonly tarefasService: TarefasService) {}
