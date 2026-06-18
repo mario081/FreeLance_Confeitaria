@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🎂 Confeitaria Mika — Sistema de Gestão de Pedidos
 
 Sistema de automação e gestão de tarefas para confeitaria artesanal.
@@ -200,6 +199,3 @@ docker exec -it postgres_confeitaria psql -U admin -d confeitaria
 # Derrubar tudo (cuidado: -v apaga os volumes/dados)
 docker compose -f docker-compose.prod.yml down
 ```
-=======
-# mario081.github.io
->>>>>>> 82b7d67e83e09c0395b830c8aa973c7522ca08c4
