@@ -16,6 +16,6 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header x-api-key ${BACKEND_API_KEY};
-        proxy_set_header Content-Type $content_type;
+        proxy_set_header Content-Type $http_content_type;
     }
 }

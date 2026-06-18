@@ -5,6 +5,9 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET não configurado');
+  if (!process.env.BACKEND_API_KEY) throw new Error('BACKEND_API_KEY não configurado');
+
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
