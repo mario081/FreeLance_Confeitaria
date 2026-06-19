@@ -5,7 +5,9 @@
 
 volumes:
   postgres_data:
+  n8n_data:
   evolution_data:
+  redis_data:
 
 services:
   postgres:
@@ -55,17 +57,46 @@ services:
     expose:
       - "5173"
 
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n_confeitaria
+    restart: always
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      NODE_ENV: production
+      WEBHOOK_URL: http://localhost:5678
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_confeitaria
+    restart: always
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+
   evolution-api:
     image: atendai/evolution-api:latest
     container_name: evolution_api_confeitaria
     restart: always
-    expose:
-      - "8080"
+    ports:
+      - "8080:8080"
     volumes:
       - evolution_data:/evolution/instances
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       SERVER_URL: ${EVOLUTION_URL}
       AUTHENTICATION_TYPE: apikey
@@ -74,6 +105,13 @@ services:
       DATABASE_PROVIDER: postgresql
       DATABASE_CONNECTION_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       DATABASE_CONNECTION_CLIENT_NAME: evolution_api
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_TTL: "604800"
+      CONFIG_SESSION_PHONE_CLIENT: "Confeitaria Mika"
+      CONFIG_SESSION_PHONE_NAME: "Chrome"
+      CONFIG_SESSION_PHONE_VERSION: "127.0.0.0"
 
   cloudflared:
     image: cloudflare/cloudflared:latest
