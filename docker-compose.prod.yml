@@ -5,7 +5,6 @@
 
 volumes:
   postgres_data:
-  n8n_data:
   evolution_data:
 
 services:
@@ -56,30 +55,6 @@ services:
     expose:
       - "5173"
 
-  n8n:
-    image: docker.n8n.io/n8nio/n8n
-    container_name: n8n_confeitaria
-    restart: always
-    expose:
-      - "5678"
-    volumes:
-      - n8n_data:/home/node/.n8n
-    environment:
-      DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: postgres
-      DB_POSTGRESDB_PORT: 5432
-      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
-      DB_POSTGRESDB_USER: ${POSTGRES_USER}
-      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
-      N8N_HOST: ${N8N_HOST}
-      N8N_PORT: 5678
-      N8N_PROTOCOL: https
-      NODE_ENV: production
-      WEBHOOK_URL: ${N8N_WEBHOOK_URL}
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   evolution-api:
     image: atendai/evolution-api:latest
     container_name: evolution_api_confeitaria
@@ -88,10 +63,17 @@ services:
       - "8080"
     volumes:
       - evolution_data:/evolution/instances
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       SERVER_URL: ${EVOLUTION_URL}
       AUTHENTICATION_TYPE: apikey
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_CONNECTION_CLIENT_NAME: evolution_api
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -103,5 +85,4 @@ services:
     depends_on:
       - backend
       - frontend
-      - n8n
       - evolution-api
