@@ -1,48 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import Login from './Login';
 
-// Todas as chamadas passam pelo BFF (/api) — a API key é injetada server-side
-// pelo proxy do Vite (dev) e nunca chega ao browser.
 const API_BASE = '/api';
 
-function headers(token) {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
-}
-
 export default function App() {
-  const [token, setToken] = useState(() => localStorage.getItem('auth_token'));
-  const [usuario, setUsuario] = useState(() => localStorage.getItem('auth_user'));
+  const [loggedIn, setLoggedIn] = useState(null); // null=verificando, false=deslogado, true=logado
+  const [usuario, setUsuario] = useState('');
   const [tarefas, setTarefas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
 
-  function handleLogin(access_token, username) {
-    localStorage.setItem('auth_token', access_token);
-    localStorage.setItem('auth_user', username);
-    setToken(access_token);
-    setUsuario(username);
-  }
-
-  function handleLogout() {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    setToken(null);
-    setUsuario(null);
-    setTarefas([]);
-  }
-
   async function carregarTarefas() {
     setCarregando(true);
+    setErro(null);
     try {
-      const resp = await fetch(`${API_BASE}/tarefas/hoje`, { headers: headers(token) });
-      if (resp.status === 401) { handleLogout(); return; }
+      const resp = await fetch(`${API_BASE}/tarefas/hoje`, { credentials: 'include' });
+      if (resp.status === 401) { setLoggedIn(false); return; }
       if (!resp.ok) throw new Error('Falha ao buscar tarefas');
-      const dados = await resp.json();
-      setTarefas(dados);
-      setErro(null);
+      setTarefas(await resp.json());
+      setLoggedIn(true);
     } catch (e) {
       setErro(e.message);
     } finally {
@@ -50,20 +26,41 @@ export default function App() {
     }
   }
 
-  useEffect(() => {
-    if (token) carregarTarefas();
-  }, [token]);
+  // Verifica sessão existente (cookie) ao montar
+  useEffect(() => { carregarTarefas(); }, []);
 
-  async function concluirTarefa(id) {
-    const resp = await fetch(`${API_BASE}/tarefas/${id}/concluir`, {
-      method: 'PATCH',
-      headers: headers(token),
-    });
-    if (resp.status === 401) { handleLogout(); return; }
-    setTarefas((atual) => atual.map((t) => (t.id === id ? { ...t, concluida: true } : t)));
+  function handleLogin(username) {
+    setUsuario(username);
+    setLoggedIn(true);
+    carregarTarefas();
   }
 
-  if (!token) return <Login onLogin={handleLogin} />;
+  async function handleLogout() {
+    try { await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' }); } catch {}
+    setLoggedIn(false);
+    setUsuario('');
+    setTarefas([]);
+  }
+
+  async function concluirTarefa(id) {
+    try {
+      const resp = await fetch(`${API_BASE}/tarefas/${id}/concluir`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (resp.status === 401) { setLoggedIn(false); return; }
+      if (!resp.ok) throw new Error(`Erro ao concluir tarefa (${resp.status})`);
+      setTarefas((atual) => atual.map((t) => (t.id === id ? { ...t, concluida: true } : t)));
+    } catch (e) {
+      setErro(e.message);
+    }
+  }
+
+  if (loggedIn === null) {
+    return <p className="text-center p-8 text-gray-500">Carregando…</p>;
+  }
+
+  if (!loggedIn) return <Login onLogin={handleLogin} />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -72,7 +69,7 @@ export default function App() {
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Dashboard do Dia</h1>
             <p className="text-gray-500 text-sm">
-              Tarefas programadas para hoje · <span className="capitalize">{usuario}</span>
+              Tarefas programadas para hoje{usuario ? ` · ${usuario}` : ''}
             </p>
           </div>
           <button
@@ -84,7 +81,12 @@ export default function App() {
         </div>
 
         {carregando && <p className="text-gray-500">Carregando…</p>}
-        {erro && <p className="text-red-500">Erro: {erro}</p>}
+        {erro && (
+          <p className="text-red-500 mb-4">
+            Erro: {erro}{' '}
+            <button onClick={carregarTarefas} className="underline text-sm">Tentar novamente</button>
+          </p>
+        )}
 
         {!carregando && !erro && tarefas.length === 0 && (
           <p className="text-gray-500">Nenhuma tarefa programada para hoje 🎉</p>
