@@ -115,7 +115,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "EVOLUTION_KEY_REVOGADA" },
+            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -168,7 +168,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key", "value": "BACKEND_KEY_REVOGADA" },
+            { "name": "x-api-key", "value": "={{ $env.BACKEND_API_KEY }}" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },

@@ -66,11 +66,13 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
     environment:
-      N8N_HOST: localhost
+      N8N_HOST: ${N8N_HOST}
       N8N_PORT: 5678
-      N8N_PROTOCOL: http
+      N8N_PROTOCOL: https
       NODE_ENV: production
-      WEBHOOK_URL: http://localhost:5678
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+      BACKEND_API_KEY: ${BACKEND_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
