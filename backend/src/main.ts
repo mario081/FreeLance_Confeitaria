@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -11,15 +12,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
+  app.use(cookieParser());
 
-  // CORS restrito apenas ao domínio do frontend (configurável via env)
   const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
   app.enableCors({
     origin: corsOrigin,
     methods: ['GET', 'POST', 'PATCH'],
+    credentials: true,
   });
 
-  // Valida e sanitiza automaticamente todo payload recebido nas rotas
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
