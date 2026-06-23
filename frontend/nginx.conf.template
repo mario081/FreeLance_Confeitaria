@@ -4,18 +4,23 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Segurança: CSP, anti-clickjacking e tipo MIME
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; frame-ancestors 'none';" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+
     # SPA — redireciona tudo para index.html
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # BFF Proxy — adiciona a API key server-side
-    # O browser nunca vê a chave; ela é injetada aqui pelo nginx
+    # BFF Proxy — adiciona a API key server-side (browser nunca vê a chave)
+    # API_URL deve apontar para o serviço interno Docker (ex: http://backend:3000)
     location /api/ {
         proxy_pass ${API_URL}/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header x-api-key ${BACKEND_API_KEY};
-        proxy_set_header Content-Type $http_content_type;
     }
 }
