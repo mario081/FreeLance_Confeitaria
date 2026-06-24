@@ -3,11 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import Login from './Login';
 
-// Login.jsx uses <label> as a sibling (not via htmlFor/id), so we query
-// by role/type instead of getByLabelText.
-const getUsuarioInput = () => screen.getByRole('textbox');
-const getSenhaInput = (container) => container.querySelector('input[type="password"]');
-
 describe('Login', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
@@ -18,10 +13,10 @@ describe('Login', () => {
   });
 
   it('renderiza campos de usuário e senha e o botão Entrar', () => {
-    const { container } = render(<Login onLogin={vi.fn()} />);
+    render(<Login onLogin={vi.fn()} />);
 
-    expect(getUsuarioInput()).toBeInTheDocument();
-    expect(getSenhaInput(container)).toBeInTheDocument();
+    expect(screen.getByLabelText('Usuário')).toBeInTheDocument();
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
   });
 
@@ -29,10 +24,10 @@ describe('Login', () => {
     const user = userEvent.setup();
     fetch.mockResolvedValue({ ok: true });
 
-    const { container } = render(<Login onLogin={vi.fn()} />);
+    render(<Login onLogin={vi.fn()} />);
 
-    await user.type(getUsuarioInput(), 'maria');
-    await user.type(getSenhaInput(container), 'senha123');
+    await user.type(screen.getByLabelText('Usuário'), 'maria');
+    await user.type(screen.getByLabelText('Senha'), 'senha123');
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
 
     expect(fetch).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({
@@ -46,10 +41,10 @@ describe('Login', () => {
     const onLogin = vi.fn();
     fetch.mockResolvedValue({ ok: true });
 
-    const { container } = render(<Login onLogin={onLogin} />);
+    render(<Login onLogin={onLogin} />);
 
-    await user.type(getUsuarioInput(), 'maria');
-    await user.type(getSenhaInput(container), 'senha123');
+    await user.type(screen.getByLabelText('Usuário'), 'maria');
+    await user.type(screen.getByLabelText('Senha'), 'senha123');
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
 
     await waitFor(() => expect(onLogin).toHaveBeenCalledWith('maria'));
@@ -59,10 +54,10 @@ describe('Login', () => {
     const user = userEvent.setup();
     fetch.mockResolvedValue({ ok: false, status: 401 });
 
-    const { container } = render(<Login onLogin={vi.fn()} />);
+    render(<Login onLogin={vi.fn()} />);
 
-    await user.type(getUsuarioInput(), 'errado');
-    await user.type(getSenhaInput(container), 'errada');
+    await user.type(screen.getByLabelText('Usuário'), 'errado');
+    await user.type(screen.getByLabelText('Senha'), 'errada');
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
 
     await waitFor(() =>
