@@ -1,17 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Response } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let authServiceLogin: jest.Mock;
-
-  const mockRes = {
-    cookie: jest.fn(),
-    clearCookie: jest.fn(),
-  };
+  let mockRes: { cookie: jest.Mock; clearCookie: jest.Mock };
 
   beforeEach(async () => {
+    mockRes = { cookie: jest.fn(), clearCookie: jest.fn() };
     authServiceLogin = jest.fn().mockResolvedValue({ access_token: 'token.jwt' });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -22,12 +20,11 @@ describe('AuthController', () => {
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
-    jest.clearAllMocks();
   });
 
   describe('login()', () => {
     it('seta cookie auth_token com httpOnly: true', async () => {
-      await controller.login({ username: 'maria', password: 'senha' }, mockRes as any);
+      await controller.login({ username: 'maria', password: 'senha' }, mockRes as unknown as Response);
 
       expect(mockRes.cookie).toHaveBeenCalledWith(
         'auth_token',
@@ -39,7 +36,7 @@ describe('AuthController', () => {
     it('retorna { ok: true }', async () => {
       const result = await controller.login(
         { username: 'maria', password: 'senha' },
-        mockRes as any,
+        mockRes as unknown as Response,
       );
       expect(result).toEqual({ ok: true });
     });
@@ -47,7 +44,7 @@ describe('AuthController', () => {
 
   describe('logout()', () => {
     it('limpa cookie auth_token', () => {
-      controller.logout(mockRes as any);
+      controller.logout(mockRes as unknown as Response);
       expect(mockRes.clearCookie).toHaveBeenCalledWith('auth_token', expect.objectContaining({ path: '/' }));
     });
   });
