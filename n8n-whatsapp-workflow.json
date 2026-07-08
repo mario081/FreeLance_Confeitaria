@@ -1,0 +1,430 @@
+{
+  "name": "Confeitaria - Cadastro de Bolos",
+  "nodes": [
+    {
+      "id": "cron-manha",
+      "name": "Schedule Manha",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 100],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "cron-tarde",
+      "name": "Schedule Tarde",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 240],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 15 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "cron-noite",
+      "name": "Schedule Noite",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 380],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 20 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "set-manha",
+      "name": "Set Disparo Manha",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [480, 100],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "d1", "name": "disparo", "type": "string", "value": "manha" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-tarde",
+      "name": "Set Disparo Tarde",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [480, 240],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "d2", "name": "disparo", "type": "string", "value": "tarde" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-noite",
+      "name": "Set Disparo Noite",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [480, 380],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "d3", "name": "disparo", "type": "string", "value": "noite" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "pg-upsert",
+      "name": "Postgres Upsert Estado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [720, 240],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversa_estado (numero, estado, dados, disparo, atualizado_em) VALUES ($1, 'aguardando_inicial', '{}', $2, NOW()) ON CONFLICT (numero) DO UPDATE SET estado = 'aguardando_inicial', dados = '{}', disparo = $2, atualizado_em = NOW()",
+        "options": {
+          "queryParams": "={{ JSON.stringify([$env.WHATSAPP_NUMBER, $json.disparo]) }}"
+        }
+      },
+      "credentials": {
+        "postgres": { "id": "1", "name": "PostgreSQL Confeitaria" }
+      }
+    },
+    {
+      "id": "http-inicial",
+      "name": "HTTP Enviar Pergunta Inicial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [960, 240],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/sendText/={{ $env.EVOLUTION_INSTANCE_NAME }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $env.WHATSAPP_NUMBER, options: { delay: 1200 }, textMessage: { text: 'Oi! 😊 Tem bolo disponível hoje?' } }) }}"
+      }
+    },
+    {
+      "id": "webhook",
+      "name": "Webhook Entrada",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 640],
+      "parameters": {
+        "path": "whatsapp-webhook",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseData": ""
+      },
+      "webhookId": "confeitaria-webhook-001"
+    },
+    {
+      "id": "set-extrair",
+      "name": "Set Extrair Dados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [480, 640],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "numero",
+              "type": "string",
+              "value": "={{ ($json.body?.data?.key?.remoteJid || '').replace('@s.whatsapp.net', '').replace('@g.us', '') }}"
+            },
+            {
+              "id": "e2",
+              "name": "mensagem",
+              "type": "string",
+              "value": "={{ $json.body?.data?.message?.conversation || $json.body?.data?.message?.extendedTextMessage?.text || '' }}"
+            },
+            {
+              "id": "e3",
+              "name": "fromMe",
+              "type": "boolean",
+              "value": "={{ !!$json.body?.data?.key?.fromMe }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "if-not-me",
+      "name": "IF Nao e Minha Mensagem",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 640],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.fromMe }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEquals" }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.mensagem }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEquals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "pg-ler",
+      "name": "Postgres Ler Estado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [960, 600],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT estado, dados, disparo FROM conversa_estado WHERE numero = $1",
+        "options": {
+          "queryParams": "={{ JSON.stringify([$json.numero]) }}"
+        }
+      },
+      "credentials": {
+        "postgres": { "id": "1", "name": "PostgreSQL Confeitaria" }
+      }
+    },
+    {
+      "id": "code-logica",
+      "name": "Code Logica Conversa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 600],
+      "parameters": {
+        "jsCode": "const numero = $('Set Extrair Dados').first().json.numero;\nconst mensagem = $('Set Extrair Dados').first().json.mensagem || '';\n\nconst rows = $input.all();\nconst row = rows.length > 0 ? rows[0].json : {};\nconst estado = row.estado || 'aguardando_inicial';\nconst dados = typeof row.dados === 'string' ? JSON.parse(row.dados) : (row.dados || {});\nconst disparo = row.disparo || 'manha';\nconst msg = mensagem.toLowerCase().trim();\n\nif (!msg) {\n  return [{ json: { action: 'ignorar', numero, mensagemResposta: '', nextEstado: estado, nextDados: JSON.stringify(dados), saveToSheets: false, dadosParaSheets: null, disparo } }];\n}\n\nfunction ehSim(t) {\n  return /\\b(sim|s|tenho|tem|claro|pode|vai|ok|okay|vou|quero|disponivel|dispon\\u00edvel|yes)\\b/.test(t);\n}\nfunction ehNao(t) {\n  return /\\b(n\\u00e3o|nao|n|sem|nenhum|zero|negativo|no)\\b/.test(t);\n}\n\nlet action = 'enviar_mensagem';\nlet nextEstado = estado;\nlet nextDados = { ...dados };\nlet mensagemResposta = '';\nlet saveToSheets = false;\nlet dadosParaSheets = null;\n\nswitch (estado) {\n  case 'aguardando_inicial':\n    if (ehSim(msg)) {\n      nextEstado = 'pergunta_sabor';\n      mensagemResposta = 'Que legal! Qual o sabor?';\n    } else if (ehNao(msg)) {\n      nextEstado = 'encerrado';\n      mensagemResposta = 'Tudo bem! Qualquer coisa me avisa. \\uD83D\\uDE0A';\n    } else {\n      mensagemResposta = 'Oi! \\uD83D\\uDE0A Tem bolo dispon\\u00EDvel hoje?';\n    }\n    break;\n\n  case 'pergunta_sabor':\n    nextDados = { ...nextDados, sabor: mensagem };\n    nextEstado = 'pergunta_tamanho';\n    mensagemResposta = 'Hmm, del\\u00EDcia! Qual o tamanho? (pequeno, m\\u00E9dio ou grande)';\n    break;\n\n  case 'pergunta_tamanho':\n    nextDados = { ...nextDados, tamanho: mensagem };\n    nextEstado = 'pergunta_preco';\n    mensagemResposta = 'Qual o pre\\u00E7o desse bolo?';\n    break;\n\n  case 'pergunta_preco':\n    nextDados = { ...nextDados, preco: mensagem };\n    nextEstado = 'pergunta_quantidade';\n    mensagemResposta = 'E quantos voc\\u00EA tem dispon\\u00EDvel?';\n    break;\n\n  case 'pergunta_quantidade': {\n    const completo = { ...nextDados, quantidade: mensagem };\n    nextDados = {};\n    nextEstado = 'aguardando_mais';\n    saveToSheets = true;\n    const agora = new Date();\n    dadosParaSheets = {\n      data: agora.toLocaleDateString('pt-BR'),\n      horario: disparo,\n      sabor: completo.sabor || '',\n      tamanho: completo.tamanho || '',\n      preco: completo.preco || '',\n      quantidade: mensagem,\n      status: 'Dispon\\u00EDvel'\n    };\n    mensagemResposta = 'Tudo anotado! \\u2705 J\\u00E1 coloquei na planilha. Tem mais algum bolo? \\uD83C\\uDF82';\n    break;\n  }\n\n  case 'aguardando_mais':\n    if (ehSim(msg)) {\n      nextEstado = 'pergunta_sabor';\n      nextDados = {};\n      mensagemResposta = 'Qual o sabor?';\n    } else {\n      nextEstado = 'encerrado';\n      mensagemResposta = 'Tudo bem! Qualquer coisa me avisa. \\uD83D\\uDE0A';\n    }\n    break;\n\n  case 'encerrado':\n  default:\n    action = 'ignorar';\n    break;\n}\n\nreturn [{ json: { numero, mensagemResposta, nextEstado, nextDados: JSON.stringify(nextDados), saveToSheets, dadosParaSheets, action, disparo } }];"
+      }
+    },
+    {
+      "id": "switch-acao",
+      "name": "Switch Acao",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1440, 600],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [{
+                  "leftValue": "={{ $json.action }}",
+                  "rightValue": "enviar_mensagem",
+                  "operator": { "type": "string", "operation": "equals" }
+                }]
+              },
+              "renameOutput": true,
+              "outputKey": "enviar"
+            },
+            {
+              "conditions": {
+                "conditions": [{
+                  "leftValue": "={{ $json.action }}",
+                  "rightValue": "ignorar",
+                  "operator": { "type": "string", "operation": "equals" }
+                }]
+              },
+              "renameOutput": true,
+              "outputKey": "ignorar"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "pg-update",
+      "name": "Postgres Update Estado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1680, 520],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversa_estado (numero, estado, dados, disparo, atualizado_em) VALUES ($3, $1, $2::jsonb, $4, NOW()) ON CONFLICT (numero) DO UPDATE SET estado = $1, dados = $2::jsonb, atualizado_em = NOW()",
+        "options": {
+          "queryParams": "={{ JSON.stringify([$json.nextEstado, $json.nextDados, $json.numero, $json.disparo]) }}"
+        }
+      },
+      "credentials": {
+        "postgres": { "id": "1", "name": "PostgreSQL Confeitaria" }
+      }
+    },
+    {
+      "id": "if-sheets",
+      "name": "IF Salvar Sheets",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1920, 520],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{
+            "id": "s1",
+            "leftValue": "={{ $json.saveToSheets }}",
+            "rightValue": true,
+            "operator": { "type": "boolean", "operation": "equals" }
+          }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "sheets-append",
+      "name": "Google Sheets Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [2160, 420],
+      "continueOnFail": true,
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEETS_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Bolos Disponíveis",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data": "={{ $json.dadosParaSheets.data }}",
+            "Horário": "={{ $json.dadosParaSheets.horario }}",
+            "Sabor": "={{ $json.dadosParaSheets.sabor }}",
+            "Tamanho": "={{ $json.dadosParaSheets.tamanho }}",
+            "Preço": "={{ $json.dadosParaSheets.preco }}",
+            "Quantidade": "={{ $json.dadosParaSheets.quantidade }}",
+            "Status": "={{ $json.dadosParaSheets.status }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "2", "name": "Google Sheets Confeitaria" }
+      }
+    },
+    {
+      "id": "http-resposta",
+      "name": "HTTP Enviar Resposta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2400, 520],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/sendText/={{ $env.EVOLUTION_INSTANCE_NAME }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Code Logica Conversa').first().json.numero, options: { delay: 1200 }, textMessage: { text: $('Code Logica Conversa').first().json.mensagemResposta } }) }}"
+      }
+    },
+    {
+      "id": "noop-ignorar",
+      "name": "NoOp Ignorar",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1680, 720],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Schedule Manha": {
+      "main": [[{ "node": "Set Disparo Manha", "type": "main", "index": 0 }]]
+    },
+    "Schedule Tarde": {
+      "main": [[{ "node": "Set Disparo Tarde", "type": "main", "index": 0 }]]
+    },
+    "Schedule Noite": {
+      "main": [[{ "node": "Set Disparo Noite", "type": "main", "index": 0 }]]
+    },
+    "Set Disparo Manha": {
+      "main": [[{ "node": "Postgres Upsert Estado", "type": "main", "index": 0 }]]
+    },
+    "Set Disparo Tarde": {
+      "main": [[{ "node": "Postgres Upsert Estado", "type": "main", "index": 0 }]]
+    },
+    "Set Disparo Noite": {
+      "main": [[{ "node": "Postgres Upsert Estado", "type": "main", "index": 0 }]]
+    },
+    "Postgres Upsert Estado": {
+      "main": [[{ "node": "HTTP Enviar Pergunta Inicial", "type": "main", "index": 0 }]]
+    },
+    "Webhook Entrada": {
+      "main": [[{ "node": "Set Extrair Dados", "type": "main", "index": 0 }]]
+    },
+    "Set Extrair Dados": {
+      "main": [[{ "node": "IF Nao e Minha Mensagem", "type": "main", "index": 0 }]]
+    },
+    "IF Nao e Minha Mensagem": {
+      "main": [
+        [{ "node": "Postgres Ler Estado", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Postgres Ler Estado": {
+      "main": [[{ "node": "Code Logica Conversa", "type": "main", "index": 0 }]]
+    },
+    "Code Logica Conversa": {
+      "main": [[{ "node": "Switch Acao", "type": "main", "index": 0 }]]
+    },
+    "Switch Acao": {
+      "main": [
+        [{ "node": "Postgres Update Estado", "type": "main", "index": 0 }],
+        [{ "node": "NoOp Ignorar", "type": "main", "index": 0 }]
+      ]
+    },
+    "Postgres Update Estado": {
+      "main": [[{ "node": "IF Salvar Sheets", "type": "main", "index": 0 }]]
+    },
+    "IF Salvar Sheets": {
+      "main": [
+        [{ "node": "Google Sheets Append", "type": "main", "index": 0 }],
+        [{ "node": "HTTP Enviar Resposta", "type": "main", "index": 0 }]
+      ]
+    },
+    "Google Sheets Append": {
+      "main": [[{ "node": "HTTP Enviar Resposta", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "meta": { "templateCredsSetupCompleted": false },
+  "tags": [],
+  "triggerCount": 4,
+  "updatedAt": "2026-07-07T00:00:00.000Z",
+  "versionId": "1"
+}
