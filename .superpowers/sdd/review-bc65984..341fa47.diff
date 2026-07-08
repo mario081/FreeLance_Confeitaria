@@ -1,0 +1,118 @@
+﻿# Review package: bc65984..341fa47
+
+## Commits
+341fa47 fix(test): mockRes isolado por teste e remove as any em auth.controller.spec
+c4b2c4d test: testes do AuthController e ApiKeyGuard
+
+## Files changed
+ backend/src/auth/api-key.guard.spec.ts   | 43 +++++++++++++++++++++++++++
+ backend/src/auth/auth.controller.spec.ts | 51 ++++++++++++++++++++++++++++++++
+ 2 files changed, 94 insertions(+)
+
+## Diff
+diff --git a/backend/src/auth/api-key.guard.spec.ts b/backend/src/auth/api-key.guard.spec.ts
+new file mode 100644
+index 0000000..8c36c21
+--- /dev/null
++++ b/backend/src/auth/api-key.guard.spec.ts
+@@ -0,0 +1,43 @@
++import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
++import { ApiKeyGuard } from './api-key.guard';
++
++describe('ApiKeyGuard', () => {
++  const CHAVE = 'chave-secreta-exatamente-32chars!';
++
++  function mockContext(apiKey: string | undefined): ExecutionContext {
++    return {
++      switchToHttp: () => ({
++        getRequest: () => ({ headers: { 'x-api-key': apiKey } }),
++      }),
++    } as unknown as ExecutionContext;
++  }
++
++  beforeEach(() => {
++    process.env.BACKEND_API_KEY = CHAVE;
++  });
++
++  afterEach(() => {
++    delete process.env.BACKEND_API_KEY;
++  });
++
++  it('retorna true com a chave correta', () => {
++    const guard = new ApiKeyGuard();
++    expect(guard.canActivate(mockContext(CHAVE))).toBe(true);
++  });
++
++  it('lança UnauthorizedException com chave ausente', () => {
++    const guard = new ApiKeyGuard();
++    expect(() => guard.canActivate(mockContext(undefined))).toThrow(UnauthorizedException);
++  });
++
++  it('lança UnauthorizedException com chave de tamanho diferente', () => {
++    const guard = new ApiKeyGuard();
++    expect(() => guard.canActivate(mockContext('curta'))).toThrow(UnauthorizedException);
++  });
++
++  it('lança UnauthorizedException se BACKEND_API_KEY não está configurada', () => {
++    delete process.env.BACKEND_API_KEY;
++    const guard = new ApiKeyGuard();
++    expect(() => guard.canActivate(mockContext(CHAVE))).toThrow(UnauthorizedException);
++  });
++});
+diff --git a/backend/src/auth/auth.controller.spec.ts b/backend/src/auth/auth.controller.spec.ts
+new file mode 100644
+index 0000000..d5c09f0
+--- /dev/null
++++ b/backend/src/auth/auth.controller.spec.ts
+@@ -0,0 +1,51 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { Response } from 'express';
++import { AuthController } from './auth.controller';
++import { AuthService } from './auth.service';
++
++describe('AuthController', () => {
++  let controller: AuthController;
++  let authServiceLogin: jest.Mock;
++  let mockRes: { cookie: jest.Mock; clearCookie: jest.Mock };
++
++  beforeEach(async () => {
++    mockRes = { cookie: jest.fn(), clearCookie: jest.fn() };
++    authServiceLogin = jest.fn().mockResolvedValue({ access_token: 'token.jwt' });
++
++    const module: TestingModule = await Test.createTestingModule({
++      controllers: [AuthController],
++      providers: [
++        { provide: AuthService, useValue: { login: authServiceLogin } },
++      ],
++    }).compile();
++
++    controller = module.get<AuthController>(AuthController);
++  });
++
++  describe('login()', () => {
++    it('seta cookie auth_token com httpOnly: true', async () => {
++      await controller.login({ username: 'maria', password: 'senha' }, mockRes as unknown as Response);
++
++      expect(mockRes.cookie).toHaveBeenCalledWith(
++        'auth_token',
++        'token.jwt',
++        expect.objectContaining({ httpOnly: true, path: '/' }),
++      );
++    });
++
++    it('retorna { ok: true }', async () => {
++      const result = await controller.login(
++        { username: 'maria', password: 'senha' },
++        mockRes as unknown as Response,
++      );
++      expect(result).toEqual({ ok: true });
++    });
++  });
++
++  describe('logout()', () => {
++    it('limpa cookie auth_token', () => {
++      controller.logout(mockRes as unknown as Response);
++      expect(mockRes.clearCookie).toHaveBeenCalledWith('auth_token', expect.objectContaining({ path: '/' }));
++    });
++  });
++});
