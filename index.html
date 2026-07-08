@@ -177,6 +177,7 @@
   <script>
     function setLang(lang) {
       document.documentElement.setAttribute('data-lang', lang);
+      document.documentElement.lang = lang;
       document.getElementById('btn-pt').classList.toggle('active', lang === 'pt');
       document.getElementById('btn-en').classList.toggle('active', lang === 'en');
       document.querySelectorAll('[data-pt]').forEach(function(el) {
