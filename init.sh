@@ -24,4 +24,17 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
         dados     JSONB NOT NULL DEFAULT '{}',
         criado_em TIMESTAMP NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS bolos (
+        id            SERIAL PRIMARY KEY,
+        sabor         TEXT NOT NULL,
+        tamanho       TEXT NOT NULL,
+        preco         DECIMAL(10,2) NOT NULL,
+        quantidade    INTEGER NOT NULL,
+        status        TEXT NOT NULL DEFAULT 'disponivel',
+        origem        TEXT NOT NULL DEFAULT 'manual',
+        disparo       TEXT,
+        criado_em     TIMESTAMP NOT NULL DEFAULT NOW(),
+        atualizado_em TIMESTAMP NOT NULL DEFAULT NOW()
+    );
 EOSQL

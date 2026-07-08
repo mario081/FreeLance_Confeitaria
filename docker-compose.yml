@@ -88,15 +88,33 @@ services:
       EXECUTIONS_PROCESS: main
       GENERIC_TIMEZONE: America/Sao_Paulo
       TZ: America/Sao_Paulo
-      # Variáveis acessíveis no workflow via $env.*
       EVOLUTION_API_URL: http://evolution-api:8080
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
       EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME}
       WHATSAPP_NUMBER: ${WHATSAPP_NUMBER}
-      GOOGLE_SHEETS_ID: ${GOOGLE_SHEETS_ID}
+      DASHBOARD_API_KEY: ${DASHBOARD_API_KEY}
+      DASHBOARD_URL: http://dashboard:3000
     volumes:
       - n8n_data:/home/node/.n8n
     ports:
       - "${N8N_PORT:-5678}:5678"
+    networks:
+      - confeitaria_net
+
+  dashboard:
+    build: ./dashboard
+    container_name: dashboard_confeitaria
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-confeitaria}"
+      DASHBOARD_SENHA: ${DASHBOARD_SENHA}
+      DASHBOARD_API_KEY: ${DASHBOARD_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      DASHBOARD_PORT: ${DASHBOARD_PORT:-3000}
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
     networks:
       - confeitaria_net
