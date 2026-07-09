@@ -159,6 +159,20 @@ describe('PUT /api/bolos/:id', () => {
       .send({ status: 'vendido' });
     expect(res.status).toBe(404);
   });
+
+  it('updates origem', async () => {
+    const { rows } = await db.query(
+      `INSERT INTO bolos (sabor, tamanho, preco, quantidade, origem) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+      ['Baunilha', 'P', 25, 1, 'whatsapp']
+    );
+    const id = rows[0].id;
+    const res = await request(app)
+      .put(`/api/bolos/${id}`)
+      .set(jwtAuth)
+      .send({ origem: 'manual' });
+    expect(res.status).toBe(200);
+    expect(res.body.origem).toBe('manual');
+  });
 });
 
 describe('DELETE /api/bolos/:id', () => {
