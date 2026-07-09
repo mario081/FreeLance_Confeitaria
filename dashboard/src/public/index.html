@@ -1,1 +1,106 @@
-<!DOCTYPE html><html lang="pt"><body><p>Dashboard a carregar...</p></body></html>
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confeitaria Mika</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen">
+  <div class="login-card">
+    <div class="login-icon">🎂</div>
+    <h1>Confeitaria Mika</h1>
+    <p class="login-sub">Painel de Bolos</p>
+    <form id="form-login">
+      <input type="password" id="input-senha" placeholder="Senha" autocomplete="current-password" required>
+      <button type="submit" class="btn-primary">Entrar</button>
+    </form>
+    <p id="login-erro" class="erro" hidden></p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" class="screen" hidden>
+  <header>
+    <span class="header-title">🎂 Confeitaria Mika</span>
+    <button id="btn-logout" class="btn-logout">Sair</button>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <div class="tabs">
+        <button class="tab active" data-data="hoje">Hoje</button>
+        <button class="tab" data-data="semana">Semana</button>
+        <button class="tab" data-data="todos">Todos</button>
+      </div>
+      <select id="filtro-status">
+        <option value="todos">Todos os status</option>
+        <option value="disponivel">Disponível</option>
+        <option value="vendido">Vendido</option>
+        <option value="expirado">Expirado</option>
+      </select>
+      <button id="btn-adicionar" class="btn-primary">+ Adicionar</button>
+    </div>
+
+    <p id="contagem" class="contagem"></p>
+
+    <div id="lista-bolos">
+      <div class="cards-view"></div>
+      <table class="table-view"></table>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" hidden>
+  <div class="modal">
+    <h2 id="modal-titulo">Adicionar Bolo</h2>
+    <form id="form-bolo">
+      <input type="hidden" id="bolo-id">
+      <label>
+        Sabor
+        <input type="text" id="bolo-sabor" placeholder="Ex: Chocolate com morango" required>
+      </label>
+      <label>
+        Tamanho
+        <select id="bolo-tamanho" required>
+          <option value="">Escolher...</option>
+          <option value="P">P — Pequeno</option>
+          <option value="M">M — Médio</option>
+          <option value="G">G — Grande</option>
+          <option value="Personalizado">Personalizado</option>
+        </select>
+      </label>
+      <label>
+        Preço (R$)
+        <input type="number" id="bolo-preco" step="0.01" min="0" placeholder="0.00" required>
+      </label>
+      <label>
+        Quantidade
+        <input type="number" id="bolo-quantidade" min="1" placeholder="1" required>
+      </label>
+      <label>
+        Status
+        <select id="bolo-status">
+          <option value="disponivel">Disponível</option>
+          <option value="vendido">Vendido</option>
+          <option value="expirado">Expirado</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
