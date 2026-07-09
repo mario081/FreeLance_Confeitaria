@@ -8,6 +8,10 @@ function getHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
 }
 
+function esc(str) {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 async function login(senha) {
   const res = await fetch(`${API}/api/auth`, {
     method: 'POST',
@@ -77,10 +81,10 @@ function renderBolos(bolos) {
   cardsEl.innerHTML = bolos.map(b => `
     <div class="bolo-card" data-id="${b.id}">
       <div class="bolo-card-top">
-        <span class="bolo-nome">🎂 ${b.sabor}</span>
-        <span class="bolo-preco">R$ ${Number(b.preco).toFixed(2)}</span>
+        <span class="bolo-nome">🎂 ${esc(b.sabor)}</span>
+        <span class="bolo-preco">R$ ${esc(Number(b.preco).toFixed(2))}</span>
       </div>
-      <div class="bolo-meta">${b.tamanho} · Qtd: ${b.quantidade} · ${origemLabel(b)}</div>
+      <div class="bolo-meta">${esc(b.tamanho)} · Qtd: ${esc(b.quantidade)} · ${esc(origemLabel(b))}</div>
       <div class="bolo-actions">
         <select onchange="changeStatus(${b.id}, this.value)">${statusOptions(b.status)}</select>
         <button class="btn-icon" onclick="openModal(${b.id})" title="Editar">✏️</button>
@@ -95,11 +99,11 @@ function renderBolos(bolos) {
     </tr></thead>
     <tbody>${bolos.map(b => `
       <tr data-id="${b.id}">
-        <td>🎂 ${b.sabor}</td>
-        <td>${b.tamanho}</td>
-        <td>R$ ${Number(b.preco).toFixed(2)}</td>
-        <td>${b.quantidade}</td>
-        <td>${origemLabel(b)}</td>
+        <td>🎂 ${esc(b.sabor)}</td>
+        <td>${esc(b.tamanho)}</td>
+        <td>R$ ${esc(Number(b.preco).toFixed(2))}</td>
+        <td>${esc(b.quantidade)}</td>
+        <td>${esc(origemLabel(b))}</td>
         <td><select onchange="changeStatus(${b.id}, this.value)">${statusOptions(b.status)}</select></td>
         <td>
           <button class="btn-icon" onclick="openModal(${b.id})">✏️</button>
@@ -111,15 +115,17 @@ function renderBolos(bolos) {
 }
 
 async function changeStatus(id, status) {
-  await fetch(`${API}/api/bolos/${id}`, {
+  const res = await fetch(`${API}/api/bolos/${id}`, {
     method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status })
   });
+  if (!res.ok) { alert('Erro ao atualizar status. Tente novamente.'); return; }
   loadBolos();
 }
 
 async function deleteBolo(id) {
   if (!confirm('Apagar este bolo?')) return;
-  await fetch(`${API}/api/bolos/${id}`, { method: 'DELETE', headers: getHeaders() });
+  const res = await fetch(`${API}/api/bolos/${id}`, { method: 'DELETE', headers: getHeaders() });
+  if (!res.ok) { alert('Erro ao apagar. Tente novamente.'); return; }
   loadBolos();
 }
 
